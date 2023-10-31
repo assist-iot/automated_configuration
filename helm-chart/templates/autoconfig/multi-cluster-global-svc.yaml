@@ -1,0 +1,17 @@
+{{- if .Values.globalService }}
+apiVersion: assist.eu/v1
+kind: MultiClusterService
+metadata:
+  name: {{ include "autoconfig.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  annotations:
+    io.cilium/global-service: "true"
+  labels:
+    {{- include "autoconfig.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: port1
+      port: {{ .Values.autoconfig.service.ports.port1.port }}
+      targetPort: {{ .Values.autoconfig.service.ports.port1.targetPort }}
+      protocol: {{ .Values.autoconfig.service.ports.port1.protocol }}
+{{- end }}

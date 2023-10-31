@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "autoconfig.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "autoconfig.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.globalService }}
+    {{- include "globalServiceAnnotations" . | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.autoconfig.service.type }}
+  ports:
+    - name: port1
+      port: {{ .Values.autoconfig.service.ports.port1.port }}
+      targetPort: {{ .Values.autoconfig.service.ports.port1.targetPort }}
+      protocol: {{ .Values.autoconfig.service.ports.port1.protocol }}
+      {{- if and (or (eq .Values.autoconfig.service.type "NodePort") (eq .Values.autoconfig.service.type "LoadBalancer")) (not (empty .Values.autoconfig.service.ports.port1.nodePort)) }}
+      nodePort: {{ .Values.autoconfig.service.ports.port1.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "autoconfig.selectorLabels" . | nindent 4 }}

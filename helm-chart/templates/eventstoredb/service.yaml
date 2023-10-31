@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eventstoredb.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "eventstoredb.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.eventstoredb.service.type }}
+  ports:
+    - name: port1
+      port: {{ .Values.eventstoredb.service.ports.port1.port }}
+      targetPort: {{ .Values.eventstoredb.service.ports.port1.targetPort }}
+      protocol: {{ .Values.eventstoredb.service.ports.port1.protocol }}
+      {{- if and (or (eq .Values.eventstoredb.service.type "NodePort") (eq .Values.eventstoredb.service.type "LoadBalancer")) (not (empty .Values.eventstoredb.service.ports.port1.nodePort)) }}
+      nodePort: {{ .Values.eventstoredb.service.ports.port1.nodePort }}
+      {{- end }}
+    - name: port2
+      port: {{ .Values.eventstoredb.service.ports.port2.port }}
+      targetPort: {{ .Values.eventstoredb.service.ports.port2.targetPort }}
+      protocol: {{ .Values.eventstoredb.service.ports.port2.protocol }}
+      {{- if and (or (eq .Values.eventstoredb.service.type "NodePort") (eq .Values.eventstoredb.service.type "LoadBalancer")) (not (empty .Values.eventstoredb.service.ports.port2.nodePort)) }}
+      nodePort: {{ .Values.eventstoredb.service.ports.port2.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "eventstoredb.selectorLabels" . | nindent 4 }}

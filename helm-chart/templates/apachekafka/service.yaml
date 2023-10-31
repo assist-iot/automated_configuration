@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apachekafka.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "apachekafka.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.apachekafka.service.type }}
+  ports:
+    - name: port1
+      port: {{ .Values.apachekafka.service.ports.port1.port }}
+      targetPort: {{ .Values.apachekafka.service.ports.port1.targetPort }}
+      protocol: {{ .Values.apachekafka.service.ports.port1.protocol }}
+      {{- if and (or (eq .Values.apachekafka.service.type "NodePort") (eq .Values.apachekafka.service.type "LoadBalancer")) (not (empty .Values.apachekafka.service.ports.port1.nodePort)) }}
+      nodePort: {{ .Values.apachekafka.service.ports.port1.nodePort }}
+      {{- end }}
+    - name: port2
+      port: {{ .Values.apachekafka.service.ports.port2.port }}
+      targetPort: {{ .Values.apachekafka.service.ports.port2.targetPort }}
+      protocol: {{ .Values.apachekafka.service.ports.port2.protocol }}
+      {{- if and (or (eq .Values.apachekafka.service.type "NodePort") (eq .Values.apachekafka.service.type "LoadBalancer")) (not (empty .Values.apachekafka.service.ports.port2.nodePort)) }}
+      nodePort: {{ .Values.apachekafka.service.ports.port2.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "apachekafka.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "apachezookeeper.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "apachezookeeper.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "apachezookeeper.fullname" . }}-headless
+  {{- if not .Values.apachezookeeper.autoscaling.enabled }}
+  replicas: {{ .Values.apachezookeeper.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "apachezookeeper.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "apachezookeeper.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.apachezookeeper.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.apachezookeeper.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.apachezookeeper.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apachezookeeper.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.apachezookeeper.podSecurityContext | nindent 8 }}
+      containers:
+        - name: apachezookeeper
+          securityContext:
+            {{- toYaml .Values.apachezookeeper.securityContext | nindent 12 }}
+          image: "{{ .Values.apachezookeeper.image.repository }}:{{ .Values.apachezookeeper.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.apachezookeeper.image.pullPolicy }}
+          ports:
+            - name: port1
+              containerPort: {{ .Values.apachezookeeper.service.ports.port1.containerPort }}
+              protocol: {{ .Values.apachezookeeper.service.ports.port1.protocol }}
+          resources:
+            {{- toYaml .Values.apachezookeeper.resources | nindent 12 }}
+
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT
+              value: {{ .Values.apachezookeeper.envVars.ZOOKEEPER_CLIENT_PORT | quote }}
+            - name: ZOOKEEPER_TICK_TIME
+              value: {{ .Values.apachezookeeper.envVars.ZOOKEEPER_TICK_TIME | quote }}
+
+          volumeMounts:
+            {{- if .Values.apachezookeeper.persistence.enabled }}
+            - name: data
+              mountPath: /path/in/container
+            {{- end }}
+      volumes:
+  {{- if and .Values.apachezookeeper.persistence.enabled .Values.apachezookeeper.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ tpl .Values.apachezookeeper.persistence.existingClaim $ }}
+  {{- else if not .Values.apachezookeeper.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+        {{- range .Values.apachezookeeper.persistence.accessModes }}
+          - {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.apachezookeeper.persistence.size | quote }}
+  {{- end }}

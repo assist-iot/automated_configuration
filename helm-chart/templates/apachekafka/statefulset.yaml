@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "apachekafka.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "apachekafka.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "apachekafka.fullname" . }}-headless
+  {{- if not .Values.apachekafka.autoscaling.enabled }}
+  replicas: {{ .Values.apachekafka.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "apachekafka.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "apachekafka.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.apachekafka.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.apachekafka.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.apachekafka.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apachekafka.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.apachekafka.podSecurityContext | nindent 8 }}
+      containers:
+        - name: apachekafka
+          securityContext:
+            {{- toYaml .Values.apachekafka.securityContext | nindent 12 }}
+          image: "{{ .Values.apachekafka.image.repository }}:{{ .Values.apachekafka.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.apachekafka.image.pullPolicy }}
+          ports:
+            - name: port1
+              containerPort: {{ .Values.apachekafka.service.ports.port1.containerPort }}
+              protocol: {{ .Values.apachekafka.service.ports.port1.protocol }}
+            - name: port2
+              containerPort: {{ .Values.apachekafka.service.ports.port2.containerPort }}
+              protocol: {{ .Values.apachekafka.service.ports.port2.protocol }}
+          resources:
+            {{- toYaml .Values.apachekafka.resources | nindent 12 }}
+
+          env:
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: {{ printf "%s:2181" (include "apachezookeeper.kubernetesServerName" .) | quote }}
+            
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: {{ .Values.apachekafka.envVars.KAFKA_ADVERTISED_LISTENERS | quote }}
+            - name: KAFKA_BROKER_ID
+              value: {{ .Values.apachekafka.envVars.KAFKA_BROKER_ID | quote }}
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: {{ .Values.apachekafka.envVars.KAFKA_INTER_BROKER_LISTENER_NAME | quote }}
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: {{ .Values.apachekafka.envVars.KAFKA_LISTENER_SECURITY_PROTOCOL_MAP | quote }}
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: {{ .Values.apachekafka.envVars.KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR | quote }}
+
+          volumeMounts:
+            {{- if .Values.apachekafka.persistence.enabled }}
+            - name: data
+              mountPath: /path/in/container
+            {{- end }}
+      volumes:
+  {{- if and .Values.apachekafka.persistence.enabled .Values.apachekafka.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ tpl .Values.apachekafka.persistence.existingClaim $ }}
+  {{- else if not .Values.apachekafka.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+        {{- range .Values.apachekafka.persistence.accessModes }}
+          - {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.apachekafka.persistence.size | quote }}
+  {{- end }}

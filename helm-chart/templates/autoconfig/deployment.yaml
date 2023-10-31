@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "autoconfig.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "autoconfig.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoconfig.autoscaling.enabled }}
+  replicas: {{ .Values.autoconfig.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "autoconfig.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "autoconfig.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.autoconfig.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.autoconfig.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.autoconfig.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.autoconfig.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.autoconfig.podSecurityContext | nindent 8 }}
+      containers:
+        - name: autoconfig
+          securityContext:
+            {{- toYaml .Values.autoconfig.securityContext | nindent 12 }}
+          image: "{{ .Values.autoconfig.image.repository }}:{{ .Values.autoconfig.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.autoconfig.image.pullPolicy }}
+          ports:
+            - name: port1
+              containerPort: {{ .Values.autoconfig.service.ports.port1.containerPort }}
+              protocol: {{ .Values.autoconfig.service.ports.port1.protocol }}
+          resources:
+            {{- toYaml .Values.autoconfig.resources | nindent 12 }}
+
+          env:
+            - name: EVENTSTORE_HOST
+              value: {{ include "eventstoredb.kubernetesServerName" . | quote }}
+            - name: KAFKA_SERVER
+              value: {{ printf "%s:9092" (include "apachekafka.kubernetesServerName" .) | quote }}
+
+            - name: REQUIREMENTS_MET_TOPIC
+              value: {{ .Values.autoconfig.envVars.REQUIREMENTS_MET_TOPIC | quote }}
+            - name: RESOURCES_TOPIC
+              value: {{ .Values.autoconfig.envVars.RESOURCES_TOPIC | quote }}
+            - name: SYSTEM_CONFIG_NAME
+              value: {{ .Values.autoconfig.envVars.SYSTEM_CONFIG_NAME | quote }}

@@ -1,0 +1,34 @@
+image: hseeberger/scala-sbt:11.0.13_1.6.1_3.1.0
+
+include:
+  - project: 'sripas/gitlab-ci-templates'
+    file: 'mirror-repo.gitlab-ci.yml'
+  - project: 'sripas/gitlab-ci-templates'
+    file: 'mirror-wiki.gitlab-ci.yml'
+  - project: 'sripas/gitlab-ci-templates'
+    file: 'publish-docs.gitlab-ci.yml'
+
+stages:
+  - stylecheck
+  - build
+  - test
+  - mirror
+
+check style and formatting:
+  stage: stylecheck
+  script:
+    # Ensure that the pipeline fails fast if there are issues with the
+    # style or formatting
+    - sbt clean scalafmt test:scalafmt
+    - git diff --exit-code || (echo "ERROR Code formatting check failed, see differences above. Run sbt scalafmt test:scalafmt before pushing."; false)
+
+
+build-job:  
+  stage: build
+  script:
+    - sbt clean compile test:compile
+
+test:
+  script:
+    # Execute your project's tests
+    - sbt test

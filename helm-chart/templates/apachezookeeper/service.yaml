@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "apachezookeeper.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "apachezookeeper.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.apachezookeeper.service.type }}
+  ports:
+    - name: port1
+      port: {{ .Values.apachezookeeper.service.ports.port1.port }}
+      targetPort: {{ .Values.apachezookeeper.service.ports.port1.targetPort }}
+      protocol: {{ .Values.apachezookeeper.service.ports.port1.protocol }}
+      {{- if and (or (eq .Values.apachezookeeper.service.type "NodePort") (eq .Values.apachezookeeper.service.type "LoadBalancer")) (not (empty .Values.apachezookeeper.service.ports.port1.nodePort)) }}
+      nodePort: {{ .Values.apachezookeeper.service.ports.port1.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "apachezookeeper.selectorLabels" . | nindent 4 }}

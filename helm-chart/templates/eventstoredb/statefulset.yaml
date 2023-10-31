@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "eventstoredb.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "eventstoredb.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "eventstoredb.fullname" . }}-headless
+  {{- if not .Values.eventstoredb.autoscaling.enabled }}
+  replicas: {{ .Values.eventstoredb.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "eventstoredb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "eventstoredb.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.eventstoredb.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.eventstoredb.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.eventstoredb.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.eventstoredb.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.eventstoredb.podSecurityContext | nindent 8 }}
+      containers:
+        - name: eventstoredb
+          securityContext:
+            {{- toYaml .Values.eventstoredb.securityContext | nindent 12 }}
+          image: "{{ .Values.eventstoredb.image.repository }}:{{ .Values.eventstoredb.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.eventstoredb.image.pullPolicy }}
+          ports:
+            - name: port1
+              containerPort: {{ .Values.eventstoredb.service.ports.port1.containerPort }}
+              protocol: {{ .Values.eventstoredb.service.ports.port1.protocol }}
+            - name: port2
+              containerPort: {{ .Values.eventstoredb.service.ports.port2.containerPort }}
+              protocol: {{ .Values.eventstoredb.service.ports.port2.protocol }}
+          resources:
+            {{- toYaml .Values.eventstoredb.resources | nindent 12 }}
+
+          env:
+            - name: EVENTSTORE_CLUSTER_SIZE
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_CLUSTER_SIZE | quote }}
+            - name: EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP | quote }}
+            - name: EVENTSTORE_ENABLE_EXTERNAL_TCP
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_ENABLE_EXTERNAL_TCP | quote }}
+            - name: EVENTSTORE_EXT_TCP_PORT
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_EXT_TCP_PORT | quote }}
+            - name: EVENTSTORE_HTTP_PORT
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_HTTP_PORT | quote }}
+            - name: EVENTSTORE_INSECURE
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_INSECURE | quote }}
+            - name: EVENTSTORE_MEM_DB
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_MEM_DB | quote }}
+            - name: EVENTSTORE_RUN_PROJECTIONS
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_RUN_PROJECTIONS | quote }}
+            - name: EVENTSTORE_START_STANDARD_PROJECTIONS
+              value: {{ .Values.eventstoredb.envVars.EVENTSTORE_START_STANDARD_PROJECTIONS | quote }}
+
+          volumeMounts:
+            {{- if .Values.eventstoredb.persistence.enabled }}
+            - name: data
+              mountPath: /path/in/container
+            {{- end }}
+      volumes:
+  {{- if and .Values.eventstoredb.persistence.enabled .Values.eventstoredb.persistence.existingClaim }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ tpl .Values.eventstoredb.persistence.existingClaim $ }}
+  {{- else if not .Values.eventstoredb.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+        {{- range .Values.eventstoredb.persistence.accessModes }}
+          - {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.eventstoredb.persistence.size | quote }}
+  {{- end }}

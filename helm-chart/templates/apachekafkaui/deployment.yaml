@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "apachekafkaui.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "apachekafkaui.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.apachekafkaui.autoscaling.enabled }}
+  replicas: {{ .Values.apachekafkaui.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "apachekafkaui.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "apachekafkaui.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.apachekafkaui.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.apachekafkaui.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.apachekafkaui.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apachekafkaui.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.apachekafkaui.podSecurityContext | nindent 8 }}
+      containers:
+        - name: apachekafkaui
+          securityContext:
+            {{- toYaml .Values.apachekafkaui.securityContext | nindent 12 }}
+          image: "{{ .Values.apachekafkaui.image.repository }}:{{ .Values.apachekafkaui.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.apachekafkaui.image.pullPolicy }}
+          ports:
+            - name: port1
+              containerPort: {{ .Values.apachekafkaui.service.ports.port1.containerPort }}
+              protocol: {{ .Values.apachekafkaui.service.ports.port1.protocol }}
+          resources:
+            {{- toYaml .Values.apachekafkaui.resources | nindent 12 }}
+
+          env:
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: {{ printf "%s:9092" (include "apachekafka.kubernetesServerName" .) | quote }}
+            - name: KAFKA_CLUSTERS_0_ZOOKEEPER
+              value: {{ printf "%s:2181" (include "apachezookeeper.kubernetesServerName" .) | quote }}
+
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: {{ .Values.apachekafkaui.envVars.KAFKA_CLUSTERS_0_NAME | quote }}
