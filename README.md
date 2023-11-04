@@ -49,10 +49,10 @@ It is implemented using persistent FSM.
 
 ## Authors
 
-- [Piotr Lewandowski](piotr.lewandowski@ibspan.waw.pl)
-- [Wiesław Pawłowski](wieslaw.pawlowski@ibspan.waw.pl)
-- [Piotr Sowiński](piotr.sowinski@ibspan.waw.pl)
-- [Przemysław Hołda](przemyslaw.holda@ibspan.waw.pl)
+- [Piotr Lewandowski](mailto:piotr.lewandowski@ibspan.waw.pl)
+- [Wiesław Pawłowski](mailto:wieslaw.pawlowski@ibspan.waw.pl)
+- [Piotr Sowiński](mailto:piotr.sowinski@ibspan.waw.pl)
+- [Przemysław Hołda](mailto:przemyslaw.holda@ibspan.waw.pl)
 
 ## License
 
